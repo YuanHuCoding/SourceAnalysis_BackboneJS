@@ -1,0 +1,9 @@
+﻿上下文  this.model.set('icoCss3', _.bind(function () { return this._extender.icoCss(this.model.get('type')) }, this));
+var events = _.defaults({}, this._extender.events, this._extender.DataGridItemViewClass.prototype.events); //整合自定义事件
+var DataItemCollectionClass = Backbone.Collection.extend({ model: Backbone.Model.extend({ defaults: this._extender.fields }) });//动态创建模型
+
+继承
+//this.constructor.__super__.constructor.__super__.initialize.call(this); //调用父类，暂时先这样写
+Backbone.BoxView.prototype.initialize.apply(this,arguments);//应该用这个
+
+注意模型的ID一致会被忽略
