@@ -63,7 +63,7 @@
     // `application/json` requests ... will encode the body as
     // `application/x-www-form-urlencoded` instead and will send the model in a
     // form param named `model`.
-    // 对于不支持application/json编码的浏览器, 可以设置Backbone.emulateJSON = true;
+    // 对于不支持application/json编码的服务器, 可以设置Backbone.emulateJSON = true;
     // 将请求类型设置为application/x-www-form-urlencoded, 并将数据放置在model参数中实现兼容
     Backbone.emulateJSON = false;
 
