@@ -38,9 +38,12 @@
 
   // Save the previous value of the `Backbone` variable, so that it can be
   // restored later on, if `noConflict` is used.
+  // 保存"Backbone"变量被覆盖之前的值
+  // 如果出现命名冲突或考虑到规范, 可通过Backbone.noConflict()方法恢复该变量被Backbone占用之前的值, 并返回Backbone对象以便重新命名
   var previousBackbone = root.Backbone;
 
   // Create a local reference to a common array method we'll want to use later.
+  // 将Array.prototype中的slice方法缓存到局部变量以供调用
   var slice = Array.prototype.slice;
 
   // Current version of the library. Keep in sync with `package.json`.
@@ -52,6 +55,11 @@
 
   // Runs Backbone.js in *noConflict* mode, returning the `Backbone` variable
   // to its previous owner. Returns a reference to this Backbone object.
+  // 放弃以"Backbone"命名框架, 并返回Backbone对象, 一般用于避免命名冲突或规范命名方式
+  // 例如:
+  // var bk = Backbone.noConflict(); // 取消"Backbone"命名, 并将Backbone对象存放于bk变量中
+  // console.log(Backbone); // 该变量已经无法再访问Backbone对象, 而恢复为Backbone定义前的值
+  // var MyBackbone = bk; // 而bk存储了Backbone对象, 我们将它重命名为MyBackbone
   Backbone.noConflict = function() {
     root.Backbone = previousBackbone;
     return this;
@@ -136,9 +144,11 @@
   //     object.on('expand', function(){ alert('expanded'); });
   //     object.trigger('expand');
   //
+  // 通过在对象中绑定Events相关方法, 允许向对象添加, 删除和触发自定义事件
   var Events = Backbone.Events = {};
 
   // Regular expression used to split event strings.
+  // eventSplitter指定处理多个事件时, 事件名称的解析规则
   var eventSplitter = /\s+/;
 
   // Iterates over the standard `event, callback` (as well as the fancy multiple
@@ -170,11 +180,17 @@
 
   // Bind an event to a `callback` function. Passing `"all"` will bind
   // the callback to all events fired.
+  // 将自定义事件(events)和回调函数(callback)绑定到当前对象
+  // 回调函数中的上下文对象为指定的context, 如果没有设置context则上下文对象默认为当前绑定事件的对象
+  // 该方法类似与DOM Level2中的addEventListener方法
+  // events允许指定多个事件名称, 通过空白字符进行分隔(如空格, 制表符等)
+  // 当事件名称为"all"时, 在调用trigger方法触发任何事件时, 均会调用"all"事件中绑定的所有回调函数
   Events.on = function(name, callback, context) {
     return internalOn(this, name, callback, context);
   };
 
   // Guard the `listening` argument from the public API.
+  //internalOn方法则是通过第五个参数来区分on和listenTo。internalOn方法的目的就是保护第五个参数，提高安全性。
   var internalOn = function(obj, name, callback, context, listening) {
     obj._events = eventsApi(onApi, obj._events || {}, name, callback, {
       context: context,
@@ -227,6 +243,10 @@
   // callbacks with that function. If `callback` is null, removes all
   // callbacks for the event. If `name` is null, removes all bound
   // callbacks for all events.
+  // 移除对象中已绑定的事件或回调函数, 可以通过name, callback和context对需要删除的事件或回调函数进行过滤
+  // - 如果context为空, 则移除所有的callback指定的函数
+  // - 如果callback为空, 则移除此事件中所有的回调函数
+  // - 如果name为空, 则移除对象中绑定的所有事件和回调函数
   Events.off = function(name, callback, context) {
     if (!this._events) return this;
     this._events = eventsApi(offApi, this._events, name, callback, {
@@ -347,6 +367,7 @@
   // passed the same arguments as `trigger` is, apart from the event name
   // (unless you're listening on `"all"`, which will cause your callback to
   // receive the true name of the event as the first argument).
+  //触发某类事件 name:事件名   后面可以跟其他参数
   Events.trigger = function(name) {
     if (!this._events) return this;
 
@@ -385,11 +406,13 @@
   };
 
   // Aliases for backwards compatibility.
+  // 绑定事件与释放事件的别名, 也为了同时兼容Backbone以前的版本
   Events.bind   = Events.on;
   Events.unbind = Events.off;
 
   // Allow the `Backbone` object to serve as a global event bus, for folks who
   // want global "pubsub" in a convenient place.
+  //Backbone的全局Pub/Sub系统.例如：Backbone.trigger('xxx通知');  this.listenTo(Backbone,'xxx通知',this.scroll);
   _.extend(Backbone, Events);
 
   // Backbone.Model
@@ -407,9 +430,13 @@
     options || (options = {});
     this.cid = _.uniqueId(this.cidPrefix);
     this.attributes = {};
+    //显式指定模型所属的Collection对象(在调用Collection的add, push等将模型添加到集合中的方法时, 会自动设置模型所属的Collection对象)
     if (options.collection) this.collection = options.collection;
+    // 设置attributes默认数据的解析方法, 例如默认数据是从服务器获取(或原始数据是XML格式), 为了兼容set方法所需的数据格式, 可使用parse方法进行解析
     if (options.parse) attrs = this.parse(attrs, options) || {};
     var defaults = _.result(this, 'defaults');
+    //如果Model在定义时设置了defaults默认数据, 则初始化数据使用defaults与attributes参数合并后的数据(attributes中的数据会覆盖defaults中的同名数据)
+    //_.defaults(object, *defaults) 定义:用defaults对象填充object 中的undefined属性。 并且返回这个object。一旦这个属性被填充，再使用defaults方法将不会有任何效果。
     attrs = _.defaults(_.extend({}, defaults, attrs), defaults);
     this.set(attrs, options);
     this.changed = {};
@@ -465,6 +492,7 @@
     },
 
     // Special-cased proxy to underscore's `_.matches` method.
+    //yuanhu 不明白
     matches: function(attrs) {
       return !!_.iteratee(attrs, this)(this.attributes);
     },
@@ -472,6 +500,7 @@
     // Set a hash of model attributes on the object, firing `"change"`. This is
     // the core primitive operation of a model, updating the data and notifying
     // anyone who needs to know about the change in state. The heart of the beast.
+    //重中之重
     set: function(key, val, options) {
       if (key == null) return this;
 
@@ -496,7 +525,9 @@
       var changing   = this._changing;
       this._changing = true;
 
-      if (!changing) {
+      if (!changing) {//yuanhu 不明白
+        // _previousAttributes变量存储模型数据的一个副本
+        // 用于在change事件中获取模型数据被改变之前的状态, 可通过previous或previousAttributes方法获取上一个状态的数据
         this._previousAttributes = _.clone(this.attributes);
         this.changed = {};
       }
@@ -514,6 +545,7 @@
         } else {
           delete changed[attr];
         }
+        // 如果options配置对象中设置了unset属性, 则将attrs数据对象中的所有属性设置为undefined
         unset ? delete current[attr] : current[attr] = val;
       }
 
@@ -530,6 +562,7 @@
 
       // You might be wondering why there's a `while` loop here. Changes can
       // be recursively nested within `"change"` events.
+      //这里要注意，事件的连锁反应，A的改变导致了B改变，B改变又导致A的更改，陷入死循环
       if (changing) return this;
       if (!silent) {
         while (this._pending) {
@@ -539,7 +572,7 @@
         }
       }
       this._pending = false;
-      this._changing = false;
+      this._changing = false;// 执行完毕标识
       return this;
     },
 
@@ -558,6 +591,13 @@
 
     // Determine if the model has changed since the last `"change"` event.
     // If you specify an attribute name, determine if that attribute has changed.
+    // 检查某个数据是否在上一次执行change事件后被改变过
+        /**
+        * 一般在change事件中配合previous或previousAttributes方法使用, 如:
+        * if(model.hasChanged('attr')) {
+        *     var attrPrev = model.previous('attr');
+        * }
+        */
     hasChanged: function(attr) {
       if (attr == null) return !_.isEmpty(this.changed);
       return _.has(this.changed, attr);
@@ -597,9 +637,9 @@
     // Fetch the model from the server, merging the response with the model's
     // local attributes. Any changed attributes will trigger a "change" event.
     fetch: function(options) {
-      options = _.extend({parse: true}, options);
+      options = _.extend({parse: true}, options);// 确保options是一个新的对象, 随后将改变options中的属性
       var model = this;
-      var success = options.success;
+      var success = options.success;// 在options中可以指定获取数据成功后的自定义回调函数      
       options.success = function(resp) {
         var serverAttrs = options.parse ? model.parse(resp, options) : resp;
         if (!model.set(serverAttrs, options)) return false;
@@ -629,6 +669,8 @@
       // If we're not waiting and attributes exist, save acts as
       // `set(attr).save(null, opts)` with validation. Otherwise, check if
       // the model will be valid when the attributes, if any, are set.
+      // 如果在options中设置了wait选项, 则被改变的数据将会被提前验证, 且服务器没有响应新数据(或响应失败)时, 本地数据会被还原为修改前的状态
+      // 如果没有设置wait选项, 则无论服务器是否设置成功, 本地数据均会被修改为最新状态
       if (attrs && !wait) {
         if (!this.set(attrs, options)) return false;
       } else if (!this._validate(attrs, options)) {
@@ -658,6 +700,8 @@
       if (method === 'patch' && !options.attrs) options.attrs = attrs;
       var xhr = this.sync(method, this, options);
 
+      // 如果设置了options.wait, 则将数据还原为修改前的状态
+      // 此时保存的请求还没有得到响应, 因此如果响应失败, 模型中将保持修改前的状态, 如果服务器响应成功, 则会在success中设置模型中的数据为最新状态
       // Restore attributes.
       this.attributes = attributes;
 
@@ -673,24 +717,32 @@
       var success = options.success;
       var wait = options.wait;
 
+      // 删除数据成功调用, 触发destroy事件, 如果模型存在于Collection集合中, 集合将监听destroy事件并在触发时从集合中移除该模型
+      // 删除模型时, 模型中的数据并没有被清空, 但模型已经从集合中移除, 因此当没有任何地方引用该模型时, 会被自动从内存中释放
+      // 建议在删除模型时, 将模型对象的引用变量设置为null
       var destroy = function() {
         model.stopListening();
         model.trigger('destroy', model, model.collection, options);
       };
 
       options.success = function(resp) {
+        // 如果在options对象中配置wait项, 则表示本地内存中的模型数据, 会在服务器数据被删除成功后再删除
+        // 如果服务器响应失败, 则本地数据不会被删除
         if (wait) destroy();
         if (success) success.call(options.context, model, resp, options);
         if (!model.isNew()) model.trigger('sync', model, resp, options);
       };
 
       var xhr = false;
+      // 如果该模型是一个客户端新建的模型, 则直接调用triggerDestroy从集合中将模型移除
       if (this.isNew()) {
         _.defer(options.success);
       } else {
         wrapError(this, options);
         xhr = this.sync('delete', this, options);
       }
+      // 如果没有在options对象中配置wait项, 则会先删除本地数据, 再发送请求删除服务器数据
+      // 此时无论服务器删除是否成功, 本地模型数据已被删除
       if (!wait) destroy();
       return xhr;
     },
@@ -698,18 +750,30 @@
     // Default URL for the model's representation on the server -- if you're
     // using Backbone's restful methods, override this to change the endpoint
     // that will be called.
+    // 获取模型在服务器接口中对应的url, 在调用save, fetch, destroy等与服务器交互的方法时, 将使用该方法获取url
+    // 生成的url类似于"PATHINFO"模式, 服务器对模型的操作只有一个url, 对于修改和删除操作会在url后追加模型id便于标识
+    // 如果在模型中定义了urlRoot, 服务器接口应为[urlRoot/id]形式
+    // 如果模型所属的Collection集合定义了url方法或属性, 则使用集合中的url形式: [collection.url/id]
+    // 在访问服务器url时会在url后面追加上模型的id, 便于服务器标识一条记录, 因此模型中的id需要与服务器记录对应
+    // 如果无法获取模型或集合的url, 将调用urlError方法抛出一个异常
+    // 如果服务器接口并没有按照"PATHINFO"方式进行组织, 可以通过重载url方法实现与服务器的无缝交互
     url: function() {
       var base =
         _.result(this, 'urlRoot') ||
         _.result(this.collection, 'url') ||
         urlError();
-      if (this.isNew()) return base;
+      if (this.isNew()) return base;// 如果当前模型是客户端新建的模型, 则不存在id属性, 服务器url直接使用base
       var id = this.get(this.idAttribute);
+      // 如果当前模型具有id属性, 可能是调用了save或destroy方法, 将在base后面追加模型的id
+      // 下面将判断base最后一个字符是否是"/", 生成的url格式为[base/id]
       return base.replace(/[^\/]$/, '$&/') + encodeURIComponent(id);
     },
 
     // **parse** converts a response into the hash of attributes to be `set` on
     // the model. The default implementation is just to pass the response along.
+    // parse方法用于解析从服务器获取的数据, 返回一个能够被set方法解析的模型数据
+    // 一般parse方法会根据服务器返回的数据进行重载, 以便构建与服务器的无缝连接
+    // 当服务器返回的数据结构与set方法所需的数据结构不一致(例如服务器返回XML格式数据时), 可使用parse方法进行转换
     parse: function(resp, options) {
       return resp;
     },
@@ -720,6 +784,9 @@
     },
 
     // A model is new if it has never been saved to the server, and lacks an id.
+    // 检查当前模型是否是客户端创建的新模型
+    // 检查方式是根据模型是否存在id标识, 客户端创建的新模型没有id标识
+    // 因此服务器响应的模型数据中必须包含id标识, 标识的属性名默认为"id", 也可以通过修改idAttribute属性自定义标识
     isNew: function() {
       return !this.has(this.idAttribute);
     },
